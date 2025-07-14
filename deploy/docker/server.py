@@ -424,6 +424,20 @@ async def metrics():
     return RedirectResponse(config["observability"]["prometheus"]["endpoint"])
 
 
+import math
+
+def clean_json(obj):
+    if isinstance(obj, dict):
+        return {k: clean_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_json(i) for i in obj]
+    elif isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    else:
+        return obj
+
 @app.post("/crawl")
 @limiter.limit(config["rate_limiting"]["default_limit"])
 @mcp_tool("crawl")
@@ -443,7 +457,7 @@ async def crawl(
         crawler_config=crawl_request.crawler_config,
         config=config,
     )
-    return JSONResponse(res)
+    return JSONResponse(clean_json(res))
 
 
 @app.post("/crawl/stream")
